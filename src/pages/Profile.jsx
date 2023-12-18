@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
 function Profile() {
-  const [user, setUser] = useState(null);
 
   const auth = getAuth();
   const [formData, setFormData] = useState({
@@ -18,9 +17,6 @@ function Profile() {
     navigate("/");
   };
 
-  useEffect(() => {
-    setUser(auth.currentUser);
-  }, []);
 
   return (
     <div className="profile">
