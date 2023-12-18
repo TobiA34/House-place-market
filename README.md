@@ -1,0 +1,3 @@
+ - Set up firebase 
+ - Set up routes
+ - Setup tab bar
