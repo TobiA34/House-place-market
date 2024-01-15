@@ -149,15 +149,30 @@ function CreateListing() {
       });
     };
 
-    const imgURLS = await Promise.all(
+    const imgUrls = await Promise.all(
       [...images].map((image) => storeImage(image))
     ).catch(() => {
-      setLoading(false)
-      toast.error('Images not uploaded')
-      return
-    })
-    console.log(imgURLS)
-    setLoading(false);
+      setLoading(false);
+      toast.error("Images not uploaded");
+      return;
+    });
+    // store form data in this variable
+    const formDataCopy = {
+      ...formData,
+      imgUrls,
+      geolocation,
+      timestamp: serverTimestamp(),
+    };
+
+    delete formDataCopy.images
+    delete formDataCopy.address
+    location && (formDataCopy.location = location)
+    !formDataCopy.offer && delete formData.discountedPrice
+    const docRef = await addDoc(collection(db, 'listings'), formDataCopy)
+
+     setLoading(false);
+     toast.success('Listing saved')
+     navigate(`/category/${formDataCopy.type}/${docRef.id}`)
   };
 
   const onMutate = (e) => {
