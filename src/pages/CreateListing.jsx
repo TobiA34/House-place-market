@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
- import {
+import {
   getStorage,
   ref,
   uploadBytesResumable,
@@ -72,11 +72,13 @@ function CreateListing() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    console.log(formData);
+
     setLoading(true);
+
     if (discountedPrice >= regularPrice) {
       setLoading(false);
       toast.error("Discounted price needs to be less than regular price");
+      return;
     }
 
     if (images.length > 6) {
@@ -92,17 +94,16 @@ function CreateListing() {
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=${process.env.REACT_APP_GEOCODE_API_KEY}`
       );
+
       const data = await response.json();
-      console.log(data);
+
       geolocation.lat = data.results[0]?.geometry.location.lat ?? 0;
       geolocation.lng = data.results[0]?.geometry.location.lng ?? 0;
-
-    formDataCopy.location = address;
 
       location =
         data.status === "ZERO_RESULTS"
           ? undefined
-          : data.results[0].formatted_address;
+          : data.results[0]?.formatted_address;
 
       if (location === undefined || location.includes("undefined")) {
         setLoading(false);
@@ -112,20 +113,21 @@ function CreateListing() {
     } else {
       geolocation.lat = latitude;
       geolocation.lng = longitude;
-     }
-    // Store images in firebase
+    }
+
+    // Store image in firebase
     const storeImage = async (image) => {
       return new Promise((resolve, reject) => {
         const storage = getStorage();
         const fileName = `${auth.currentUser.uid}-${image.name}-${uuidv4()}`;
+
         const storageRef = ref(storage, "images/" + fileName);
 
         const uploadTask = uploadBytesResumable(storageRef, image);
+
         uploadTask.on(
           "state_changed",
           (snapshot) => {
-            // Observe state change events such as progress, pause, and resume
-            // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
             const progress =
               (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
             console.log("Upload is " + progress + "% done");
@@ -136,14 +138,18 @@ function CreateListing() {
               case "running":
                 console.log("Upload is running");
                 break;
+              default:
+                break;
             }
           },
           (error) => {
-            reject(error)
-           },
+            reject(error);
+          },
           () => {
+            // Handle successful uploads on complete
+            // For instance, get the download URL: https://firebasestorage.googleapis.com/...
             getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-               resolve(downloadURL)
+              resolve(downloadURL);
             });
           }
         );
@@ -157,7 +163,7 @@ function CreateListing() {
       toast.error("Images not uploaded");
       return;
     });
-    // store form data in this variable
+
     const formDataCopy = {
       ...formData,
       imgUrls,
@@ -165,15 +171,15 @@ function CreateListing() {
       timestamp: serverTimestamp(),
     };
 
-    delete formDataCopy.images
-    delete formDataCopy.address
-    location && (formDataCopy.location = location)
-    !formDataCopy.offer && delete formData.discountedPrice
-    const docRef = await addDoc(collection(db, 'listings'), formDataCopy)
+    formDataCopy.location = address;
+    delete formDataCopy.images;
+    delete formDataCopy.address;
+    !formDataCopy.offer && delete formDataCopy.discountedPrice;
 
-     setLoading(false);
-     toast.success('Listing saved')
-     navigate(`/category/${formDataCopy.type}/${docRef.id}`)
+    const docRef = await addDoc(collection(db, "listings"), formDataCopy);
+    setLoading(false);
+    toast.success("Listing saved");
+    navigate(`/category/${formDataCopy.type}/${docRef.id}`);
   };
 
   const onMutate = (e) => {
