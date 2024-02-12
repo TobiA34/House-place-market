@@ -9,6 +9,9 @@ import ListingItem from '../components/ListingItem'
  function Category() {
     const [listings, setListings] = useState(null)
     const [loading, setLoading] = useState(true)
+
+    const [lastFetchedLisiting, setLastFetchedListing] = useState(null)
+
     const params = useParams()
 
 
@@ -23,7 +26,12 @@ import ListingItem from '../components/ListingItem'
          limit(10))
 
          //Execute query
-         const querySnap = await getDocs(q)
+         const querySnap = await 
+         getDocs(q)
+
+         const lastVisible = querySnap.docs[querySnap.docs.length -1]
+         setLastFetchedListing(lastVisible)
+
          const listings = []
          querySnap.forEach((doc) => {
             return listings.push({
@@ -40,32 +48,82 @@ import ListingItem from '../components/ListingItem'
          fetchlistings()
     },[])
 
+// Pagination/load more
+ const onFetchMorelistings = async () => {
+   try {
+     //Get reference
+     const listingsRef = collection(db, "listings");
+     //Create a query
+     const q = query(
+       listingsRef,
+       where("type", "==", params.categoryName),
+       orderBy("timestamp", "desc"),
+       startAfter(lastFetchedLisiting),
+       limit(2)
+     );
+
+     //Execute query
+     const querySnap = await getDocs(q);
+
+     const lastVisible = querySnap.docs[querySnap.docs.length - 1];
+     setLastFetchedListing(lastVisible);
+
+     const listings = [];
+     querySnap.forEach((doc) => {
+       return listings.push({
+         id: doc.id,
+         data: doc.data(),
+       });
+     });
+     setListings((prevState) => [...prevState, ...listings]);
+     setLoading(false);
+   } catch (error) {
+     toast.error("Could not fetch listings");
+   }
+ };
+
+
   
   
   return (
-    <div className='category'>
-    <header>
-        <p className='pageHeader'>
-            {params.categoryName === 'rent' ? 'Places for rent': 'Places for sale'}
+    <div className="category">
+      <header>
+        <p className="pageHeader">
+          {params.categoryName === "rent"
+            ? "Places for rent"
+            : "Places for sale"}
         </p>
-    </header>
-    {loading ? (
-        <Spinner/>
-    ) : listings && listings.length > 0 ? (
+      </header>
+      {loading ? (
+        <Spinner />
+      ) : listings && listings.length > 0 ? (
         <>
-        <main>
-            <ul className='categoryListings'>
-                {listings.map((listing) => (
-                    <ListingItem listing={listing.data} id={listing.id} key={listing.id}/>
-                ))}
+          <main>
+            <ul className="categoryListings">
+              {listings.map((listing) => (
+                <ListingItem
+                  listing={listing.data}
+                  id={listing.id}
+                  key={listing.id}
+                />
+              ))}
             </ul>
-        </main>
+          </main>
+
+          <br />
+          <br />
+          {lastFetchedLisiting && (
+            <p className="loadMore" onClick={onFetchMorelistings}>
+              {" "}
+              Load More
+            </p>
+          )}
         </>
-    ) : (
+      ) : (
         <p>No listings for {params.categoryName}</p>
-    )}
-   </div>
-  )
+      )}
+    </div>
+  );
 }
 
 export default Category
