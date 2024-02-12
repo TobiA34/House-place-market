@@ -18,6 +18,7 @@ function Offers() {
   const [listings, setListings] = useState(null);
   const [loading, setLoading] = useState(true);
   const params = useParams();
+  const [lastFetchedLisiting, setLastFetchedListing] = useState(null);
 
   useEffect(() => {
     const fetchlistings = async () => {
@@ -27,14 +28,18 @@ function Offers() {
         //Create a query
         const q = query(
           listingsRef,
-          where("offer", "==",  true),
+          where("offer", "==", true),
           orderBy("timestamp", "desc"),
           limit(10)
         );
 
         //Execute query
         const querySnap = await getDocs(q);
-        const listings = [];
+
+        const lastVisible = querySnap.docs[querySnap.docs.length - 1];
+        setLastFetchedListing(lastVisible);
+
+         const listings = [];
         querySnap.forEach((doc) => {
           return listings.push({
             id: doc.id,
@@ -50,12 +55,44 @@ function Offers() {
     fetchlistings();
   }, []);
 
+  // Pagination/load more
+  const onFetchMorelistings = async () => {
+    try {
+      //Get reference
+      const listingsRef = collection(db, "listings");
+      //Create a query
+      const q = query(
+        listingsRef,
+        where("offer", "==", true),
+        orderBy("timestamp", "desc"),
+        startAfter(lastFetchedLisiting),
+        limit(2)
+      );
+
+      //Execute query
+      const querySnap = await getDocs(q);
+
+      const lastVisible = querySnap.docs[querySnap.docs.length - 1];
+      setLastFetchedListing(lastVisible);
+
+      const listings = [];
+      querySnap.forEach((doc) => {
+        return listings.push({
+          id: doc.id,
+          data: doc.data(),
+        });
+      });
+      setListings((prevState) => [...prevState, ...listings]);
+      setLoading(false);
+    } catch (error) {
+      toast.error("Could not fetch listings");
+    }
+  };
+
   return (
     <div className="category">
       <header>
-        <p className="pageHeader">
-           Offers
-        </p>
+        <p className="pageHeader">Offers</p>
       </header>
       {loading ? (
         <Spinner />
@@ -72,6 +109,14 @@ function Offers() {
               ))}
             </ul>
           </main>
+          <br />
+          <br />
+          {lastFetchedLisiting && (
+            <p className="loadMore" onClick={onFetchMorelistings}>
+              {" "}
+              Load More
+            </p>
+          )}
         </>
       ) : (
         <p>There are no current offers</p>
