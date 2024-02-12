@@ -17,6 +17,7 @@ import ListingItem from "../components/ListingItem";
 function Offers() {
   const [listings, setListings] = useState(null);
   const [loading, setLoading] = useState(true);
+  // eslint-disable-next-line
   const params = useParams();
   const [lastFetchedLisiting, setLastFetchedListing] = useState(null);
 
@@ -39,7 +40,7 @@ function Offers() {
         const lastVisible = querySnap.docs[querySnap.docs.length - 1];
         setLastFetchedListing(lastVisible);
 
-         const listings = [];
+        const listings = [];
         querySnap.forEach((doc) => {
           return listings.push({
             id: doc.id,
